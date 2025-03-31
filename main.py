@@ -9,8 +9,7 @@ from branch_and_bound import branch_and_bound_tsp
 from grovers_algorithm import grovers_algorithm_tsp
 from qaoa import qaoa_tsp
 
-
-def visualize_tsp_results(results, coordinates):
+def visualize_tsp_results(results, coordinates, best_algorithms, min_distance):
     """Visualize all TSP tours side by side"""
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
     axes = axes.flatten()
@@ -39,15 +38,19 @@ def visualize_tsp_results(results, coordinates):
             G.add_edge(city, next_city, weight=cost)
             edge_labels[(city, next_city)] = f"{cost:.2f}"
 
+        # Determine node color based on whether this algorithm is among the best
+        node_color = 'lightgreen' if algo_name in best_algorithms else 'lightblue'
+
         # Draw nodes
-        nx.draw_networkx_nodes(G, pos, node_color='lightgreen', node_size=500, ax=ax)
+        nx.draw_networkx_nodes(G, pos, node_color=node_color, node_size=500, ax=ax)
 
         # Draw node labels
         nx.draw_networkx_labels(G, pos, font_weight='bold', ax=ax)
 
         # Draw edges with arrows
+        edge_color = 'green' if algo_name in best_algorithms else 'blue'
         nx.draw_networkx_edges(G, pos, arrows=True, arrowsize=20,
-                               edge_color='blue', width=2, ax=ax)
+                               edge_color=edge_color, width=2, ax=ax)
 
         # Add edge labels (costs)
         for (u, v), label in edge_labels.items():
@@ -91,7 +94,14 @@ def visualize_tsp_results(results, coordinates):
                         ha='center',
                         fontsize=8)
 
-        ax.set_title(f"{algo_name}\nTour: {tour}\nCost: {tour_distance:.2f}")
+        # Determine if this is an optimal solution and add appropriate title
+        if algo_name in best_algorithms:
+            title = f"{algo_name}\nTour: {tour}\nCost: {tour_distance:.2f} (OPTIMAL)"
+        else:
+            gap_percentage = ((tour_distance - min_distance) / min_distance) * 100
+            title = f"{algo_name}\nTour: {tour}\nCost: {tour_distance:.2f}\nGap: +{gap_percentage:.2f}%"
+
+        ax.set_title(title)
         ax.axis('on')
         ax.grid(True, linestyle='--', alpha=0.7)
 
@@ -105,6 +115,33 @@ def visualize_tsp_results(results, coordinates):
     plt.tight_layout()
     plt.savefig("tsp_comparison.png", dpi=300, bbox_inches='tight')
     plt.show()
+
+
+def calculate_optimality_gap(results):
+    """
+    Calculate the optimality gap for each algorithm.
+    Returns a dictionary with algorithm names as keys and optimality metrics as values.
+    """
+    distances = {algo: result[0] for algo, result in results.items()}
+    min_distance = min(distances.values())
+
+    gaps = {}
+    for algo, distance in distances.items():
+        # Calculate absolute gap
+        absolute_gap = distance - min_distance
+        # Calculate percentage gap
+        percentage_gap = (absolute_gap / min_distance) * 100 if min_distance > 0 else 0
+        # Calculate relative performance (1.0 means optimal)
+        relative_performance = min_distance / distance if distance > 0 else 0
+
+        gaps[algo] = {
+            'distance': distance,
+            'absolute_gap': absolute_gap,
+            'percentage_gap': percentage_gap,
+            'relative_performance': relative_performance
+        }
+
+    return gaps, min_distance
 
 
 def main():
@@ -153,24 +190,55 @@ def main():
     qaoa_distance, qaoa_tour = qaoa_tsp(num_cities, coordinates)
     results["QAOA"] = (qaoa_distance, qaoa_tour)
 
+    # Calculate optimality gaps
+    gaps, min_distance = calculate_optimality_gap(results)
+
+    # Determine which algorithms achieved the optimal solution
+    best_algorithms = [algo for algo, metrics in gaps.items()
+                       if abs(metrics['absolute_gap']) < 1e-10]  # Using small epsilon for floating point comparison
+
+    # Find ties (algorithms that produce the same result)
+    unique_distances = {}
+    for algo, (distance, _) in results.items():
+        # Round to handle floating point precision issues
+        rounded_distance = round(distance, 2)
+        if rounded_distance in unique_distances:
+            unique_distances[rounded_distance].append(algo)
+        else:
+            unique_distances[rounded_distance] = [algo]
+
+    # Display algorithms with identical results
+    print("\nAlgorithms with identical results:")
+    print("-" * 50)
+    for distance, algos in unique_distances.items():
+        if len(algos) > 1:
+            print(f"Distance {distance:.2f}: {', '.join(algos)}")
+
     # Compare results
     print("\nAlgorithm comparison:")
-    print("-" * 50)
-    print(f"{'Algorithm':<20} {'Distance':<10}")
-    print("-" * 50)
-    print(f"{'Simulated Annealing':<20} {sa_distance:<10.2f}")
-    print(f"{'Branch and Bound':<20} {bb_distance:<10.2f}")
-    print(f"{'Grovers Algorithm':<20} {grover_distance:<10.2f}")
-    print(f"{'QAOA':<20} {qaoa_distance:<10.2f}")
+    print("-" * 80)
+    print(f"{'Algorithm':<20} {'Distance':<10} {'Gap (%)':<10} {'Relative Perf.':<15}")
+    print("-" * 80)
 
-    # Find the best solution
-    best_algo = min(results.items(), key=lambda x: x[1][0])[0]
-    best_distance = min(sa_distance, bb_distance, grover_distance, qaoa_distance)
-    print(f"\nBest solution: {best_algo} with distance {best_distance:.2f}")
+    # Sort by distance for clearer comparison
+    sorted_gaps = sorted(gaps.items(), key=lambda x: x[1]['distance'])
+
+    for algo, metrics in sorted_gaps:
+        is_optimal = " (OPTIMAL)" if algo in best_algorithms else ""
+        print(
+            f"{algo:<20} {metrics['distance']:<10.2f} {metrics['percentage_gap']:<10.2f}% {metrics['relative_performance']:<15.3f}{is_optimal}")
+
+    # Report on the best solution(s)
+    if len(best_algorithms) == 1:
+        print(f"\nBest solution: {best_algorithms[0]} with distance {min_distance:.2f}")
+    else:
+        print(f"\nMultiple algorithms achieved the optimal distance of {min_distance:.2f}:")
+        for algo in best_algorithms:
+            print(f"- {algo}")
 
     # Visualize the results
     print("\nGenerating visualizations...")
-    visualize_tsp_results(results, coordinates)
+    visualize_tsp_results(results, coordinates, best_algorithms, min_distance)
     print("Visualization saved to 'tsp_comparison.png'")
 
 
