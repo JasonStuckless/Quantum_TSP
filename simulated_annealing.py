@@ -3,6 +3,7 @@ import random
 import time
 from math import exp
 
+#create matrix for cities
 def create_distance_matrix_from_coordinates(coordinates):
     num_cities = len(coordinates)
     dist_matrix = np.zeros((num_cities, num_cities))
@@ -15,12 +16,14 @@ def create_distance_matrix_from_coordinates(coordinates):
             dist_matrix[j][i] = dist
     return dist_matrix
 
+#calculate total distance
 def calculate_tsp_cost(tour, dist_matrix):
     cost = 0
     for i in range(len(tour)):
         cost += dist_matrix[tour[i]][tour[(i + 1) % len(tour)]]
     return cost
 
+#main simulated annealing
 def simulated_annealing_tsp(num_cities, coordinates):
     """
     Solve TSP using Simulated Annealing
@@ -36,7 +39,7 @@ def simulated_annealing_tsp(num_cities, coordinates):
 
     dist_matrix = create_distance_matrix_from_coordinates(coordinates)
 
-    # Parameters
+    # Setting Parameters
     initial_temp = 1000.0
     final_temp = 1e-3
     alpha = 0.995
@@ -55,13 +58,13 @@ def simulated_annealing_tsp(num_cities, coordinates):
 
     while temp > final_temp:
         for _ in range(max_iter):
-            # Generate neighbor by swapping two cities
+            # swapping 2 cities
             i, j = random.sample(range(num_cities), 2)
             neighbor = list(current_solution)
             neighbor[i], neighbor[j] = neighbor[j], neighbor[i]
             neighbor_cost = calculate_tsp_cost(neighbor, dist_matrix)
 
-            # Accept new solution if better or with certain probability
+            # Seeing if solution is better or not
             delta = neighbor_cost - current_cost
             if delta < 0 or random.random() < exp(-delta / temp):
                 current_solution = neighbor
