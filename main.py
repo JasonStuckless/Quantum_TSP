@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 # External functions (already implemented elsewhere)
-from simulated_annealing import simulated_annealing_tsp
-from branch_and_bound import branch_and_bound_tsp
+#from simulated_annealing import simulated_annealing_tsp
+#from branch_and_bound import branch_and_bound_tsp
 from grovers_algorithm import grovers_algorithm_tsp
 from qaoa import qaoa_tsp
 
@@ -174,13 +174,13 @@ def main():
     results = {}
 
     # Call each algorithm (all implemented elsewhere)
-    print("\nRunning Simulated Annealing algorithm...")
-    sa_distance, sa_tour = simulated_annealing_tsp(num_cities, coordinates)
-    results["Simulated Annealing"] = (sa_distance, sa_tour)
+    # print("\nRunning Simulated Annealing algorithm...")
+    # sa_distance, sa_tour = simulated_annealing_tsp(num_cities, coordinates)
+    # results["Simulated Annealing"] = (sa_distance, sa_tour)
 
-    print("\nRunning Branch and Bound algorithm...")
-    bb_distance, bb_tour = branch_and_bound_tsp(num_cities, coordinates)
-    results["Branch and Bound"] = (bb_distance, bb_tour)
+    # print("\nRunning Branch and Bound algorithm...")
+    # bb_distance, bb_tour = branch_and_bound_tsp(num_cities, coordinates)
+    # results["Branch and Bound"] = (bb_distance, bb_tour)
 
     print("\nRunning Grover's Algorithm simulation...")
     grover_distance, grover_tour = grovers_algorithm_tsp(num_cities, coordinates)
