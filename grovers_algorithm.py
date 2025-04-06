@@ -1,6 +1,7 @@
 
 import numpy as np
 import itertools
+import time
 from qiskit import QuantumCircuit, transpile
 from qiskit_aer import AerSimulator
 
@@ -40,6 +41,8 @@ def create_diffuser(num_qubits):
     return diffuser
 
 def grovers_algorithm_tsp(num_cities, coordinates):
+    start_time = time.time()
+
     city_coords = np.array(coordinates)
     distances = compute_distances(city_coords)
     all_routes = list(itertools.permutations(range(num_cities)))
@@ -75,5 +78,10 @@ def grovers_algorithm_tsp(num_cities, coordinates):
         distances[(best_route[i], best_route[i + 1])] for i in range(len(best_route) - 1)
     )
     total_distance += distances[(best_route[-1], best_route[0])]
+
+    total_time = time.time() - start_time
+    print(f"[Grover] Best tour found: {list(best_route)}")
+    print(f"[Grover] Tour distance: {total_distance:.2f}")
+    print(f"[Grover] Total execution time: {total_time:.2f} seconds")
 
     return total_distance, list(best_route)
